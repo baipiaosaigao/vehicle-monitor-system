@@ -1,6 +1,5 @@
 import { useVehicleStore } from '@/pinia/vehicleStore';
 
-let timer: any = null;
 let angle = 0;
 
 // 按键状态记录
@@ -16,7 +15,7 @@ export function startMockEngine() {
   store.addLog('INFO', '模拟引擎启动 (全功能版)');
 
   // 50ms 刷新一次 (20FPS)
-  timer = setInterval(() => {
+  setInterval(() => {
     // 1. 获取当前状态快照
     const s = store.status;
     let { battery, speed, altitude, cpuUsage, memUsage } = s;

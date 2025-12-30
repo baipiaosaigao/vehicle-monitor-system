@@ -100,7 +100,7 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue';
-import { Plus, Delete } from '@element-plus/icons-vue';
+import { Plus } from '@element-plus/icons-vue';
 import { useVehicleStore } from '@/pinia/vehicleStore';
 import { ElMessage } from 'element-plus';
 // 👇 引入 ManualJoystick 组件

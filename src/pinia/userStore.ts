@@ -1,12 +1,10 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
 
 // 定义三种角色
 export type UserRole = 'ADMIN' | 'OPERATOR' | 'VIEWER';
 
 export const useUserStore = defineStore('user', () => {
-  const router = useRouter(); // 注意：在 setup 外使用 router 可能需要适配，这里我们在 action 里处理跳转通常没问题，或者在组件里跳
 
   // 从 localStorage 读取，实现“记住登录状态”
   const token = ref(localStorage.getItem('token') || '');

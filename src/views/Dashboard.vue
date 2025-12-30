@@ -1,28 +1,29 @@
 <template>
   <div class="dashboard p-20">
-    <div class="header-bar mb-20">
+    <div class="header-bar mb-10">
       <div class="user-info">
         <h2 class="sys-title">无人车监控台</h2>
         <span class="divider">|</span>
         <span class="welcome">欢迎, {{ userStore.username }} <el-tag effect="dark" :type="roleTagType" size="small" class="ml-10">{{ userStore.role }}</el-tag></span>
       </div>
       <div class="header-actions">
+        <el-button v-if="canControl" type="success" size="small" plain :icon="Download" @click="handleExport">数据导出</el-button>
         <el-button v-if="canControl" type="primary" size="small" @click="$router.push('/task')">AI 任务</el-button>
         <el-button type="danger" size="small" plain @click="userStore.logout()">退出</el-button>
       </div>
     </div>
 
-    <el-row :gutter="15" class="mb-20">
+    <el-row :gutter="10" class="mb-10">
       <el-col :span="4" v-for="item in statusItems" :key="item.label">
-        <el-card shadow="hover" class="status-card" :body-style="{ padding: '12px' }">
+        <el-card shadow="hover" class="status-card" :body-style="{ padding: '8px 12px' }">
           <div class="stat-value" :class="item.colorClass">{{ item.value }}</div>
           <div class="stat-label">{{ item.label }}</div>
         </el-card>
       </el-col>
     </el-row>
 
-    <el-row :gutter="20" class="main-row">
-      <el-col :span="14" class="left-panel-col">
+    <el-row :gutter="10" class="main-row">
+      <el-col :span="13" class="left-panel-col">
         <div class="split-layout">
           <el-card class="map-section" :body-style="{ padding: 0, height: '100%' }">
             <LiveMap />
@@ -33,88 +34,95 @@
         </div>
       </el-col>
 
-      <el-col :span="10" class="flex-col h-full">
-        <el-card class="h-full right-card" :body-style="{ padding: '0px', height: '100%', display: 'flex', flexDirection: 'column' }">
-          
-          <el-tabs v-model="activeTab" class="dashboard-tabs" stretch>
-            
-            <el-tab-pane label="驾驶控制" name="control">
-              <div class="tab-content">
-                <div class="control-box">
-                  <ManualJoystick v-if="canControl" />
-                  <div v-else class="no-auth">无权限</div>
-                </div>
-                
-                <div class="log-box-wrapper">
-                  <div class="panel-title">实时日志</div>
-                  <div class="log-scroll">
-                    <div v-for="log in vehicleStore.logs" :key="log.id" class="log-item" :class="log.type">
-                      [{{ log.time }}] {{ log.content }}
-                    </div>
-                  </div>
-                </div>
+      <el-col :span="11" class="flex-col h-full gap-10">
+        
+        <el-card class="flex-1 control-sensor-card" :body-style="{ padding: '0', height: '100%' }">
+          <template #header>
+            <div class="card-header py-5">
+              <span>驾驶与感知中心</span>
+              <div class="status-indicators">
+                <span class="dot green"></span> 数据流正常
               </div>
-            </el-tab-pane>
+            </div>
+          </template>
 
-            <el-tab-pane label="传感器监控" name="sensor">
-              <div class="tab-content sensor-content">
-                
+          <div class="combined-panel-horizontal">
+            <div class="panel-left">
+              <div class="joystick-wrapper-compact">
+                <ManualJoystick v-if="canControl" />
+                <div v-else class="no-auth">无控制权限</div>
+              </div>
+              
+              <div class="env-compact">
                 <div class="env-row">
-                  <div class="env-item">
-                    <div class="env-val" :class="{ 'warn': vehicleStore.status.env.temperature > 40 }">
+                  <div class="env-mini-item">
+                    <span class="label">温度</span>
+                    <span class="val" :class="{ 'warn': vehicleStore.status.env.temperature > 40 }">
                       {{ vehicleStore.status.env.temperature }}°C
-                    </div>
-                    <div class="env-label">温度</div>
+                    </span>
                   </div>
-                  <div class="env-item">
-                    <div class="env-val">{{ vehicleStore.status.env.humidity }}%</div>
-                    <div class="env-label">湿度</div>
+                  <div class="env-mini-item">
+                    <span class="label">湿度</span>
+                    <span class="val">{{ vehicleStore.status.env.humidity }}%</span>
                   </div>
-                  <div class="env-item">
-                    <div class="env-val">{{ vehicleStore.status.env.pressure }}hPa</div>
-                    <div class="env-label">气压</div>
+                  <div class="env-mini-item">
+                    <span class="label">气压</span>
+                    <span class="val">{{ vehicleStore.status.env.pressure }}</span>
                   </div>
                 </div>
-
-                <div class="chart-box">
-                  <div class="chart-title">IMU 加速度 (m/s²) & 陀螺仪 (deg/s)</div>
-                  <div ref="imuChartRef" style="height: 180px; width: 100%"></div>
-                </div>
-
-                <div class="chart-box">
-                  <div class="chart-title">毫米波雷达 & 超声波 (m)</div>
-                  <div ref="distChartRef" style="height: 160px; width: 100%"></div>
-                </div>
-
               </div>
-            </el-tab-pane>
+            </div>
 
-          </el-tabs>
+            <el-divider direction="vertical" style="height: 100%; margin: 0;" />
 
+            <div class="panel-right">
+              <div class="chart-container flex-1">
+                <div class="chart-header">IMU 姿态监控 (m/s²)</div>
+                <div ref="imuChartRef" class="chart-body"></div>
+              </div>
+              <el-divider style="margin: 5px 0;" />
+              <div class="chart-container flex-1">
+                <div class="chart-header">避障雷达 (m)</div>
+                <div ref="distChartRef" class="chart-body"></div>
+              </div>
+            </div>
+          </div>
         </el-card>
+
+        <el-card class="log-card" :body-style="{ padding: '5px 10px', height: '100%', display: 'flex', flexDirection: 'column' }">
+          <div class="log-header-text">系统日志</div>
+          <div class="log-scroll">
+            <div v-for="log in vehicleStore.logs" :key="log.id" class="log-item" :class="log.type">
+              <span class="time">[{{ log.time }}]</span> {{ log.content }}
+            </div>
+          </div>
+        </el-card>
+
       </el-col>
     </el-row>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useVehicleStore } from '@/pinia/vehicleStore';
 import { useUserStore } from '@/pinia/userStore';
+import { startMockEngine } from '@/utils/mockEngine';
 import LiveMap from '@/components/Map/LiveMap.vue';
 import ManualJoystick from '@/components/Control/ManualJoystick.vue';
 import CameraPanel from '@/components/Monitor/CameraPanel.vue';
 import * as echarts from 'echarts';
+// ✨✨✨ 引入 xlsx 用于导出 ✨✨✨
+import * as XLSX from 'xlsx';
+import { Download } from '@element-plus/icons-vue';
+import { ElMessage } from 'element-plus';
+import dayjs from 'dayjs';
 
 const vehicleStore = useVehicleStore();
 const userStore = useUserStore();
-const activeTab = ref('control');
 
-// 权限
 const roleTagType = computed(() => userStore.role === 'ADMIN' ? 'danger' : 'info');
 const canControl = computed(() => ['ADMIN', 'OPERATOR'].includes(userStore.role));
-
-// 状态卡片
 const statusItems = computed(() => [
   { label: '连接', value: vehicleStore.status.isConnected ? '在线' : '离线', colorClass: vehicleStore.status.isConnected ? 'text-green' : 'text-gray' },
   { label: '模式', value: vehicleStore.status.mode === 'AUTO' ? 'AI' : '人工', colorClass: 'text-blue' },
@@ -124,7 +132,58 @@ const statusItems = computed(() => [
   { label: '海拔', value: `${vehicleStore.status.altitude}m`, colorClass: 'text-dark' },
 ]);
 
-// --- ECharts 逻辑 ---
+// --- ✨✨✨ 数据导出逻辑 ✨✨✨ ---
+const handleExport = () => {
+  try {
+    const wb = XLSX.utils.book_new();
+
+    // 1. 准备传感器数据 (合并 IMU 和 雷达)
+    // 注意：historyData 中的各个数组长度可能一致也可能微小差异，这里简单按索引合并
+    const sensorSheetData = vehicleStore.historyData.accel.map((acc, index) => {
+      const gyro = vehicleStore.historyData.gyro[index] || { x:0, y:0, z:0 };
+      const dist = vehicleStore.historyData.distance[index] || { ultrasonic:0, radar:0 };
+      return {
+        '时间': acc.time,
+        '加速度X': acc.x, '加速度Y': acc.y, '加速度Z': acc.z,
+        '陀螺仪X': gyro.x, '陀螺仪Y': gyro.y, '陀螺仪Z': gyro.z,
+        '超声波距离(m)': dist.ultrasonic,
+        '雷达距离(m)': dist.radar
+      };
+    });
+    const sensorSheet = XLSX.utils.json_to_sheet(sensorSheetData);
+    XLSX.utils.book_append_sheet(wb, sensorSheet, "传感器历史数据");
+
+    // 2. 准备所有日志
+    const logSheetData = vehicleStore.logs.map(log => ({
+      '时间': log.time,
+      '类型': log.type,
+      '内容': log.content
+    }));
+    const logSheet = XLSX.utils.json_to_sheet(logSheetData);
+    XLSX.utils.book_append_sheet(wb, logSheet, "系统完整日志");
+
+    // 3. 准备告警记录 (筛选 Warning 和 Error)
+    const alertSheetData = vehicleStore.logs
+      .filter(log => log.type === 'WARNING' || log.type === 'ERROR')
+      .map(log => ({
+        '时间': log.time,
+        '级别': log.type,
+        '告警内容': log.content
+      }));
+    const alertSheet = XLSX.utils.json_to_sheet(alertSheetData);
+    XLSX.utils.book_append_sheet(wb, alertSheet, "告警记录");
+
+    // 4. 下载文件
+    const filename = `Vehicle_Data_${dayjs().format('YYYYMMDD_HHmmss')}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    ElMessage.success(`导出成功: ${filename}`);
+  } catch (e) {
+    console.error(e);
+    ElMessage.error('导出失败，请检查控制台');
+  }
+};
+
+// --- ECharts ---
 const imuChartRef = ref();
 const distChartRef = ref();
 let imuChart: any = null;
@@ -135,56 +194,44 @@ const initCharts = () => {
     imuChart = echarts.init(imuChartRef.value);
     imuChart.setOption({
       tooltip: { trigger: 'axis' },
-      legend: { data: ['Ax', 'Ay', 'Az', 'Gz'], bottom: 0, textStyle: { fontSize: 10 } },
-      grid: { top: 10, bottom: 25, left: 30, right: 10 },
+      legend: { data: ['Ax', 'Ay', 'Az'], bottom: 0, icon: 'circle', itemWidth: 8 },
+      grid: { top: 10, bottom: 20, left: 35, right: 10 },
       xAxis: { type: 'category', show: false },
-      yAxis: { type: 'value', splitLine: { show: false } },
+      yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed' } } },
       series: [
-        { name: 'Ax', type: 'line', showSymbol: false, data: [] },
-        { name: 'Ay', type: 'line', showSymbol: false, data: [] },
-        { name: 'Az', type: 'line', showSymbol: false, data: [] },
-        { name: 'Gz', type: 'line', showSymbol: false, yAxisIndex: 0, data: [], lineStyle: { type: 'dashed' } }
+        { name: 'Ax', type: 'line', showSymbol: false, smooth: true, data: [] },
+        { name: 'Ay', type: 'line', showSymbol: false, smooth: true, data: [] },
+        { name: 'Az', type: 'line', showSymbol: false, smooth: true, data: [] }
       ]
     });
   }
-
   if (distChartRef.value) {
     distChart = echarts.init(distChartRef.value);
     distChart.setOption({
       tooltip: { trigger: 'axis' },
-      legend: { data: ['超声波', '雷达'], bottom: 0 },
-      grid: { top: 10, bottom: 25, left: 30, right: 10 },
+      legend: { data: ['超声波', '雷达'], bottom: 0, icon: 'roundRect', itemWidth: 8 },
+      grid: { top: 10, bottom: 20, left: 35, right: 10 },
       xAxis: { type: 'category', show: false },
-      yAxis: { type: 'value', splitLine: { show: false } },
-      visualMap: {
-        show: false,
-        pieces: [{ lte: 1, color: 'red' }, { gt: 1, color: '#409EFF' }], // 距离<1m 变红
-        seriesIndex: 0 
-      },
+      yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed' } } },
       series: [
-        { name: '超声波', type: 'line', showSymbol: false, data: [] },
-        { name: '雷达', type: 'line', showSymbol: false, data: [], itemStyle: { color: '#E6A23C' } }
+        { name: '超声波', type: 'line', showSymbol: false, smooth: true, areaStyle: { opacity: 0.1 }, data: [] },
+        { name: '雷达', type: 'line', showSymbol: false, smooth: true, data: [], itemStyle: { color: '#E6A23C' } }
       ]
     });
   }
 };
 
-// 监听数据更新图表
 watch(() => vehicleStore.historyData, (newVal) => {
-  if (activeTab.value !== 'sensor') return; // 不在当前页不渲染，省资源
-
   if (imuChart) {
     imuChart.setOption({
       xAxis: { data: newVal.accel.map(i => i.time) },
       series: [
         { data: newVal.accel.map(i => i.x) },
         { data: newVal.accel.map(i => i.y) },
-        { data: newVal.accel.map(i => i.z) },
-        { data: newVal.gyro.map(i => i.z) } // 只画Gz演示，避免线太多
+        { data: newVal.accel.map(i => i.z) }
       ]
     });
   }
-
   if (distChart) {
     distChart.setOption({
       xAxis: { data: newVal.distance.map(i => i.time) },
@@ -196,59 +243,72 @@ watch(() => vehicleStore.historyData, (newVal) => {
   }
 }, { deep: true });
 
-// 切换 Tab 时重绘图表 (解决 display:none 导致的宽度问题)
-watch(activeTab, (val) => {
-  if (val === 'sensor') {
-    nextTick(() => {
-      if (!imuChart) initCharts();
-      else { imuChart.resize(); distChart.resize(); }
-    });
-  }
+onMounted(() => {
+  startMockEngine();
+  initCharts();
+  window.addEventListener('resize', handleResize);
 });
 
-onMounted(() => {
-  // 默认不加载图表，等切到 tab
-  window.addEventListener('resize', () => { imuChart?.resize(); distChart?.resize(); });
-});
 onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize);
   imuChart?.dispose();
   distChart?.dispose();
 });
+
+const handleResize = () => {
+  imuChart?.resize();
+  distChart?.resize();
+};
 </script>
 
 <style scoped>
-.p-20 { padding: 20px; height: 100vh; background: #f0f2f5; display: flex; flex-direction: column; box-sizing: border-box; }
-.mb-20 { margin-bottom: 15px; }
+/* 全局布局紧凑化 */
+.p-20 { padding: 15px; height: 100vh; background: #f0f2f5; display: flex; flex-direction: column; box-sizing: border-box; }
+.mb-10 { margin-bottom: 10px; }
 .main-row { flex: 1; overflow: hidden; } 
 .h-full { height: 100%; }
 .flex-col { display: flex; flex-direction: column; }
-.header-bar { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 10px 20px; border-radius: 8px; }
-.stat-value { font-size: 18px; font-weight: bold; }
+.flex-1 { flex: 1; }
+.gap-10 { gap: 10px; }
+
+.header-bar { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 8px 15px; border-radius: 8px; }
+.stat-value { font-size: 16px; font-weight: bold; }
 .stat-label { font-size: 12px; color: #666; }
 .text-green { color: #67C23A; } .text-red { color: #F56C6C; } .text-blue { color: #409EFF; } .text-dark { color: #303133; }
 
-.split-layout { display: flex; flex-direction: column; height: 100%; gap: 15px; }
-.map-section { flex: 1.5; min-height: 0; }
-.camera-section { flex: 1; min-height: 0; }
+.split-layout { display: flex; flex-direction: column; height: 100%; gap: 10px; }
+.map-section { flex: 3; min-height: 0; }
+.camera-section { flex: 2; min-height: 0; }
 
-.right-card { overflow: hidden; }
-.dashboard-tabs { height: 100%; display: flex; flex-direction: column; }
-:deep(.el-tabs__content) { flex: 1; overflow: hidden; padding: 0 !important; }
-.tab-content { height: 100%; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+.control-sensor-card { flex: 3; min-height: 0; display: flex; flex-direction: column; }
+.log-card { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
-.control-box { flex: 0 0 auto; display: flex; justify-content: center; }
-.log-box-wrapper { flex: 1; display: flex; flex-direction: column; min-height: 0; border: 1px solid #ebeef5; border-radius: 4px; padding: 10px; }
-.panel-title { font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+.card-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; padding: 10px 15px; border-bottom: 1px solid #ebeef5; }
+.py-5 { padding-top: 5px; padding-bottom: 5px; }
+.status-indicators { font-size: 12px; color: #67C23A; display: flex; align-items: center; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: #67C23A; margin-right: 5px; display: inline-block; }
+
+.combined-panel-horizontal { display: flex; height: 100%; overflow: hidden; }
+.panel-left { width: 40%; display: flex; flex-direction: column; padding: 10px; justify-content: space-between; background: #fafafa; }
+.panel-right { width: 60%; display: flex; flex-direction: column; padding: 10px; }
+
+.joystick-wrapper-compact { flex: 1; display: flex; justify-content: center; align-items: center; transform: scale(0.95); }
+.env-compact { margin-top: 10px; background: #fff; border-radius: 6px; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.env-row { display: flex; justify-content: space-around; }
+.env-mini-item { text-align: center; }
+.env-mini-item .label { display: block; font-size: 12px; color: #999; margin-bottom: 2px; }
+.env-mini-item .val { font-size: 16px; font-weight: bold; color: #333; }
+.env-mini-item .val.warn { color: #F56C6C; }
+
+.chart-container { display: flex; flex-direction: column; min-height: 0; }
+.chart-header { font-size: 12px; font-weight: bold; color: #606266; margin-bottom: 5px; padding-left: 5px; border-left: 3px solid #409EFF; }
+.chart-body { flex: 1; width: 100%; min-height: 0; }
+
+.no-auth { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; color: #999; }
+
+.log-header-text { font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #333; }
 .log-scroll { flex: 1; overflow-y: auto; font-size: 12px; }
-.log-item { margin-bottom: 2px; } .log-item.ERROR { color: #F56C6C; }
-
-/* 传感器监控页样式 */
-.env-row { display: flex; justify-content: space-around; background: #f9fafc; padding: 10px; border-radius: 6px; }
-.env-item { text-align: center; }
-.env-val { font-size: 20px; font-weight: bold; color: #409EFF; }
-.env-val.warn { color: #F56C6C; }
-.env-label { font-size: 12px; color: #909399; }
-
-.chart-box { border: 1px solid #eee; border-radius: 6px; padding: 10px; background: #fff; }
-.chart-title { font-size: 13px; font-weight: bold; margin-bottom: 10px; border-left: 3px solid #409EFF; padding-left: 8px; }
+.log-item { margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } 
+.log-item.ERROR { color: #F56C6C; }
+.time { color: #999; margin-right: 5px; }
 </style>

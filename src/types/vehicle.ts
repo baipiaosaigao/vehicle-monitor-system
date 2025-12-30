@@ -1,3 +1,5 @@
+// 文件路径: src/types/vehicle.ts
+
 export type RunMode = 'MANUAL' | 'AUTO' | 'SIMULATION';
 
 export interface Location {
@@ -7,24 +9,14 @@ export interface Location {
 }
 
 export interface VehicleStatus {
+  isConnected: boolean;
+  mode: RunMode;
   speed: number;
   battery: number;
-  mode: RunMode;
   location: Location;
-  isConnected: boolean;
-  isEmergencyStopped: boolean; // 急停状态
-}
-
-export interface Task {
-  id: string;
-  name: string;
-  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
-  progress: number;
-  steps: string[];
-  currentStepIndex: number;
-
-  // 新增：规划出的路径点 (用于在地图上画虚线)
-  plannedRoute: { lat: number; lng: number }[];
+  isEmergencyStopped: boolean;
+  limitSpeed?: number;    // 限速设置
+  turningAngle?: number;  // 转向灵敏度
 }
 
 export interface Log {
@@ -34,8 +26,19 @@ export interface Log {
   content: string;
 }
 
+export interface Task {
+  id: string;
+  name: string;
+  status: 'PENDING' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED'; // 增加 PAUSED 状态
+  progress: number;
+  steps: string[];
+  currentStepIndex: number;
+  // ✨ 新增：规划路径点，用于地图绘制
+  plannedRoute?: { lat: number; lng: number }[]; 
+}
+
 export interface TaskTemplate {
   id: string;
   name: string;
-  steps: string[]; // 例如: ["路径规划", "自动巡航", "拍照"]
+  steps: string[];
 }

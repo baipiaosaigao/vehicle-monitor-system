@@ -15,6 +15,16 @@
       
       <div class="header-actions">
         <el-button 
+          v-if="['ADMIN', 'OPERATOR'].includes(userStore.role)" 
+          type="primary" 
+          size="small" 
+          :icon="Position" 
+          @click="$router.push('/task')"
+        >
+          AI 任务规划
+        </el-button>
+
+        <el-button 
           v-if="canControl" 
           type="success" 
           size="small" 
@@ -41,7 +51,7 @@
     </el-row>
 
     <el-row :gutter="20" class="main-row">
-       <el-col :span="16" class="left-panel-col">
+      <el-col :span="16" class="left-panel-col">
         <div class="split-layout">
           <el-card class="map-section" :body-style="{ padding: 0, height: '100%' }">
             <LiveMap />
@@ -56,7 +66,7 @@
       </el-col>
 
       <el-col :span="8" class="flex-col h-full gap-20">
-        <el-card header="键盘控制" class="control-card">
+        <el-card header="手动驾驶" class="control-card">
           <template v-if="canControl">
             <ManualJoystick />
           </template>
@@ -114,9 +124,9 @@ import LiveMap from '@/components/Map/LiveMap.vue';
 import ManualJoystick from '@/components/Control/ManualJoystick.vue';
 import CameraPanel from '@/components/Monitor/CameraPanel.vue';
 import * as echarts from 'echarts';
-import { Lock, Hide, Download } from '@element-plus/icons-vue'; // 引入 Download 图标
+import { Lock, Hide, Download, Position } from '@element-plus/icons-vue'; // ✨ 引入 Position 图标
 import { ElMessageBox, ElMessage } from 'element-plus';
-import * as XLSX from 'xlsx'; // 引入 XLSX 库
+import * as XLSX from 'xlsx'; 
 
 const vehicleStore = useVehicleStore();
 const userStore = useUserStore();
@@ -139,7 +149,7 @@ const handleLogout = () => {
   }).then(() => { userStore.logout(); });
 };
 
-// --- ECharts 逻辑 (保持不变) ---
+// --- ECharts 逻辑 ---
 const chartRef = ref();
 const chartInstance = shallowRef();
 const statusItems = computed(() => [
@@ -171,26 +181,18 @@ watch(() => vehicleStore.sensorData, (data) => {
   if (chartInstance.value) chartInstance.value.setOption({ series: [{ data }] });
 }, { deep: true });
 
-
-// --- 新增：数据导出逻辑 ---
+// --- 导出逻辑 ---
 const exportDialogVisible = ref(false);
 const isExporting = ref(false);
-const exportOptions = reactive({
-  sensor: true,
-  logs: true,
-  alerts: true
-});
+const exportOptions = reactive({ sensor: true, logs: true, alerts: true });
 
-const openExportDialog = () => {
-  exportDialogVisible.value = true;
-};
+const openExportDialog = () => { exportDialogVisible.value = true; };
 
-// 辅助函数：生成模拟的历史数据 (为了让 Excel 看起来内容丰富)
 const generateMockHistory = () => {
   const data = [];
   const now = new Date();
   for (let i = 0; i < 50; i++) {
-    const time = new Date(now.getTime() - i * 1000 * 60); // 过去50分钟
+    const time = new Date(now.getTime() - i * 1000 * 60);
     data.push({
       timestamp: time.toLocaleString(),
       speed: (Math.random() * 5 + 2).toFixed(2) + ' m/s',
@@ -205,53 +207,27 @@ const generateMockHistory = () => {
 
 const handleExportConfirm = () => {
   isExporting.value = true;
-  
   setTimeout(() => {
     try {
-      // 1. 创建一个新的工作簿
       const wb = XLSX.utils.book_new();
-
-      // 2. 根据勾选，添加 Sheet 页
       if (exportOptions.sensor) {
-        // 生成 50 条模拟历史数据
-        const sensorData = generateMockHistory();
-        const ws_sensor = XLSX.utils.json_to_sheet(sensorData);
+        const ws_sensor = XLSX.utils.json_to_sheet(generateMockHistory());
         XLSX.utils.book_append_sheet(wb, ws_sensor, "传感器历史数据");
       }
-
       if (exportOptions.logs) {
-        // 使用 Store 里真实的 Log 数据
-        // 处理一下格式，只导出时间和内容
-        const logData = vehicleStore.logs.map(log => ({
-          Time: log.time,
-          Type: log.type,
-          Content: log.content
-        }));
+        const logData = vehicleStore.logs.map(log => ({ Time: log.time, Type: log.type, Content: log.content }));
         const ws_logs = XLSX.utils.json_to_sheet(logData);
         XLSX.utils.book_append_sheet(wb, ws_logs, "系统日志");
       }
-
       if (exportOptions.alerts) {
-        // 筛选 Store Log 里的 Warning 和 Error
-        // 🔹 修改点：显式添加 : any[] 类型声明，打破 TypeScript 的严格推断
-        const alertData: any[] = vehicleStore.logs
-          .filter(log => log.type === 'WARNING' || log.type === 'ERROR')
-          .map(log => ({ Time: log.time, Level: log.type, Message: log.content }));
-        
-        // 现在可以 push 任意字符串了，不会报错
-        if(alertData.length === 0) {
-           alertData.push({ Time: '-', Level: '-', Message: '无异常记录' });
-        }
-        
+        const alertData: any[] = vehicleStore.logs.filter(l => l.type === 'WARNING' || l.type === 'ERROR').map(l => ({ Time: l.time, Level: l.type, Message: l.content }));
+        if(alertData.length === 0) alertData.push({ Time: '-', Level: '-', Message: '无异常记录' });
         const ws_alerts = XLSX.utils.json_to_sheet(alertData);
         XLSX.utils.book_append_sheet(wb, ws_alerts, "告警记录");
       }
-
-      // 3. 导出文件
       const fileName = `Vehicle_Data_${new Date().toISOString().slice(0,10)}.xlsx`;
       XLSX.writeFile(wb, fileName);
-
-      ElMessage.success('导出成功！已保存到本地');
+      ElMessage.success('导出成功！');
       exportDialogVisible.value = false;
     } catch (e) {
       ElMessage.error('导出失败');
@@ -259,12 +235,12 @@ const handleExportConfirm = () => {
     } finally {
       isExporting.value = false;
     }
-  }, 1000); // 模拟生成文件的耗时
+  }, 1000);
 };
 </script>
 
 <style scoped>
-/* 保持原有 CSS ... */
+/* 保持所有原有样式，直接复制即可 */
 .p-20 { padding: 20px; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; background-color: #f0f2f5; }
 .mb-20 { margin-bottom: 15px; }
 .main-row { flex: 1; overflow: hidden; } 
@@ -272,20 +248,8 @@ const handleExportConfirm = () => {
 .flex-col { display: flex; flex-direction: column; }
 .gap-20 { gap: 15px; }
 .ml-10 { margin-left: 10px; }
-
-/* 调整 Header 样式，支持右侧按钮组 */
-.header-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #fff;
-  padding: 10px 20px;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-}
-.header-actions { display: flex; gap: 10px; } /* 新增：按钮组间距 */
-
-/* ...原有样式... */
+.header-bar { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 10px 20px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+.header-actions { display: flex; gap: 10px; }
 .sys-title { font-size: 18px; margin: 0; display: inline-block; vertical-align: middle; color: #303133; }
 .divider { margin: 0 15px; color: #dcdfe6; }
 .welcome { font-size: 14px; color: #606266; }
@@ -310,12 +274,5 @@ const handleExportConfirm = () => {
 .log-item.ERROR { color: #F56C6C; }
 .log-item.WARNING { color: #E6A23C; }
 .log-item.INFO { color: #606266; }
-
-/* 新增：导出选项样式 */
-.export-options {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 10px 20px;
-}
+.export-options { display: flex; flex-direction: column; gap: 10px; padding: 10px 20px; }
 </style>

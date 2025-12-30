@@ -1,11 +1,30 @@
-// 文件路径: src/types/vehicle.ts
-
 export type RunMode = 'MANUAL' | 'AUTO' | 'SIMULATION';
 
 export interface Location {
   lat: number;
   lng: number;
   bearing: number;
+}
+
+// 激光雷达点 (保持不变)
+export interface LidarPoint {
+  angle: number;
+  distance: number;
+  opacity: number;
+  isObstacle: boolean;
+}
+
+// ✨✨✨ 新增：IMU 6轴数据接口 ✨✨✨
+export interface ImuData {
+  ax: number; ay: number; az: number; // 加速度
+  gx: number; gy: number; gz: number; // 陀螺仪
+}
+
+// ✨✨✨ 新增：环境感知数据接口 ✨✨✨
+export interface EnvData {
+  temperature: number; // 温度
+  humidity: number;    // 湿度
+  pressure: number;    // 气压
 }
 
 export interface VehicleStatus {
@@ -15,10 +34,20 @@ export interface VehicleStatus {
   battery: number;
   location: Location;
   isEmergencyStopped: boolean;
-  limitSpeed?: number;    // 限速设置
-  turningAngle?: number;  // 转向灵敏度
+  limitSpeed?: number;
+  turningAngle?: number;
+  altitude: number;
+  cpuUsage: number;
+  memUsage: number;
+
+  // ✨ 新增实时传感器状态
+  imu: ImuData;
+  env: EnvData;
+  ultrasonicDist: number; // 超声波距离 (m)
+  radarDist: number;      // 毫米波雷达距离 (m)
 }
 
+// 日志和任务接口保持不变...
 export interface Log {
   id: string;
   time: string;
@@ -29,11 +58,10 @@ export interface Log {
 export interface Task {
   id: string;
   name: string;
-  status: 'PENDING' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED'; // 增加 PAUSED 状态
+  status: 'PENDING' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED';
   progress: number;
   steps: string[];
   currentStepIndex: number;
-  // ✨ 新增：规划路径点，用于地图绘制
   plannedRoute?: { lat: number; lng: number }[]; 
 }
 
